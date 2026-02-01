@@ -2,7 +2,7 @@
 <html lang="km">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
     <title>DAP RESIDENCE | ប្រព័ន្ធគ្រប់គ្រងផ្ទះជួល</title>
     
     <!-- PWA Configuration -->
@@ -383,6 +383,19 @@
             font-family: 'Kantumruy Pro', sans-serif;
             transition: all 0.3s ease;
             background: white;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        /* iOS PWA: when keyboard opens, scroll focused input into view past sticky nav */
+        @supports (-webkit-overflow-scrolling: touch) {
+            html {
+                scroll-behavior: smooth;
+            }
+            .form-group input:focus,
+            .form-group select:focus,
+            .form-group textarea:focus {
+                scroll-margin-top: 160px;
+            }
         }
         
         .form-group input:focus,
@@ -702,6 +715,26 @@
         .success-message.show {
             display: block;
         }
+
+        /* iOS PWA Keyboard Fix */
+        body {
+            /* Prevent iOS from zooming when tapping inputs */
+            -webkit-text-size-adjust: 100%;
+        }
+        
+        /* Ensure inputs scroll into view when keyboard opens on iOS */
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            /* Small padding-bottom ensures the focused input is visible above keyboard */
+            scroll-margin-bottom: 20px;
+        }
+        
+        /* Fix: on iOS PWA, sticky header can block scroll-into-view */
+        .page {
+            scroll-padding-top: 130px; /* header + nav height */
+        }
+
     </style>
     
     <!-- Libraries for PDF and Image Export -->
@@ -816,12 +849,6 @@
                         <div style="font-size: 0.85rem; color: var(--text-secondary);">Export from Desktop → Import on Phone</div>
                     </div>
                 </div>
-                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-                    <button class="btn btn-primary" style="flex: 1; min-width: 140px; padding: 0.75rem 1rem;" onclick="exportData()">📤 Export ទិន្នន័យ</button>
-                    <button class="btn btn-primary" style="flex: 1; min-width: 140px; padding: 0.75rem 1rem; background: var(--success);" onclick="document.getElementById('importFile').click()">📥 Import ទិន្នន័យ</button>
-                    <input type="file" id="importFile" accept=".json" style="display:none;" onchange="importData(event)">
-                </div>
-            </div>
                 <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
                     <button class="btn btn-primary" style="flex: 1; min-width: 140px; padding: 0.75rem 1rem;" onclick="exportData()">📤 Export ទិន្នន័យ</button>
                     <button class="btn btn-primary" style="flex: 1; min-width: 140px; padding: 0.75rem 1rem; background: var(--success);" onclick="document.getElementById('importFile').click()">📥 Import ទិន្នន័យ</button>
@@ -2524,7 +2551,6 @@
 <html lang="km">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>របាយការណ៍ប្រចាំខែ - DAP RESIDENCE</title>
     <link href="https://fonts.googleapis.com/css2?family=Battambang:wght@300;400;700;900&display=swap" rel="stylesheet">
     <style>
@@ -3587,6 +3613,19 @@ Thank you for your payment!
             }, 3000);
         }
         
+
+        // iOS PWA: scroll focused input into view when keyboard opens
+        // On iOS Safari standalone (PWA), the keyboard push-up doesn't work reliably
+        // so we manually scroll the focused element into view
+        document.addEventListener('focusin', function(e) {
+            var el = e.target;
+            if (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA') {
+                setTimeout(function() {
+                    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                }, 350);
+            }
+        });
+
         // Close modal when clicking outside
         document.getElementById('receiptModal').addEventListener('click', function(e) {
             if (e.target === this) {
@@ -3693,6 +3732,24 @@ Thank you for your payment!
             // Reset file input so same file can be re-imported
             event.target.value = '';
         }
+
+
+        // ========================================
+        // iOS PWA Keyboard Fix
+        // When keyboard opens, scroll the focused input into view
+        // ========================================
+        (function() {
+            function handleFocus(e) {
+                var target = e.target;
+                if (target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.tagName === 'TEXTAREA') {
+                    // Small delay to let keyboard open first
+                    setTimeout(function() {
+                        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 300);
+                }
+            }
+            document.addEventListener('focus', handleFocus, true); // true = capture phase
+        })();
 
     </script>
 </body>
