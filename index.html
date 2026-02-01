@@ -806,6 +806,29 @@
             </div>
         </div>
         
+
+            <!-- Data Sync Export / Import -->
+            <div style="margin-top: 2rem; background: var(--card); border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow); border: 2px dashed var(--primary);">
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                    <span style="font-size: 1.5rem;">🔄</span>
+                    <div>
+                        <div style="font-weight: 700; color: var(--primary); font-size: 1rem;">Sync ទិន្នន័យ (Desktop ↔ Phone)</div>
+                        <div style="font-size: 0.85rem; color: var(--text-secondary);">Export from Desktop → Import on Phone</div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                    <button class="btn btn-primary" style="flex: 1; min-width: 140px; padding: 0.75rem 1rem;" onclick="exportData()">📤 Export ទិន្នន័យ</button>
+                    <button class="btn btn-primary" style="flex: 1; min-width: 140px; padding: 0.75rem 1rem; background: var(--success);" onclick="document.getElementById('importFile').click()">📥 Import ទិន្នន័យ</button>
+                    <input type="file" id="importFile" accept=".json" style="display:none;" onchange="importData(event)">
+                </div>
+            </div>
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                    <button class="btn btn-primary" style="flex: 1; min-width: 140px; padding: 0.75rem 1rem;" onclick="exportData()">📤 Export ទិន្នន័យ</button>
+                    <button class="btn btn-primary" style="flex: 1; min-width: 140px; padding: 0.75rem 1rem; background: var(--success);" onclick="document.getElementById('importFile').click()">📥 Import ទិន្នន័យ</button>
+                    <input type="file" id="importFile" accept=".json" style="display:none;" onchange="importData(event)">
+                </div>
+            </div>
+
         <!-- Rooms Page -->
         <div id="rooms" class="page">
             <div class="form-card">
@@ -3591,6 +3614,86 @@ Thank you for your payment!
             loadRoomsTable();
             loadUtilityRoomSelect();
         }
+
+        // ========================================
+        // DATA EXPORT / IMPORT (Sync between devices)
+        // ========================================
+        
+        function exportData() {
+            const data = {
+                _version: 1,
+                _exported: new Date().toISOString(),
+                rooms: DB.rooms,
+                tenants: DB.tenants,
+                utilities: DB.utilities,
+                invoices: DB.invoices,
+                payments: DB.payments,
+                monthlyArchive: DB.monthlyArchive
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const now = new Date();
+            const stamp = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+            a.download = 'DAP_RESIDENCE_' + stamp + '.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showSuccess('✅ Export success! File: DAP_RESIDENCE_' + stamp + '.json');
+        }
+        
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    
+                    // Validate structure
+                    if (!data.rooms && !data.tenants && !data.invoices) {
+                        alert('❌ થ†ំ† invalid — નFile નot DAP RESIDENCE!');
+                        return;
+                    }
+                    
+                    // Confirm overwrite
+                    const currentCount = DB.rooms.length + DB.tenants.length + DB.invoices.length;
+                    const importCount = (data.rooms||[]).length + (data.tenants||[]).length + (data.invoices||[]).length;
+                    
+                    if (currentCount > 0) {
+                    if (!confirm('⚠️ This will REPLACE current data!\n\nCurrent: ' + currentCount + ' items\nImport: ' + importCount + ' items\n\nContinue?')) {
+                            return;
+                        }
+                    }
+                    
+                    // Import
+                    if (data.rooms) { DB.rooms = data.rooms; DB.save('rooms'); }
+                    if (data.tenants) { DB.tenants = data.tenants; DB.save('tenants'); }
+                    if (data.utilities) { DB.utilities = data.utilities; DB.save('utilities'); }
+                    if (data.invoices) { DB.invoices = data.invoices; DB.save('invoices'); }
+                    if (data.payments) { DB.payments = data.payments; DB.save('payments'); }
+                    if (data.monthlyArchive) { DB.monthlyArchive = data.monthlyArchive; localStorage.setItem('monthlyArchive', JSON.stringify(DB.monthlyArchive)); }
+                    
+                    // Refresh all pages
+                    loadDashboard();
+                    
+                    showSuccess('✅ Import success! (' + importCount + ' items loaded)');
+                    
+                } catch(err) {
+                    alert('❌ Error: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+            
+            // Reset file input so same file can be re-imported
+            event.target.value = '';
+        }
+
     </script>
 </body>
 </html>
